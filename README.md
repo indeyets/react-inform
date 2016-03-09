@@ -10,12 +10,6 @@ Forms are not currently fun to work with in React.  There are a lot of form libr
 
 `react-inform` is a form library for React that avoids all of these issues.
 
-## Guide
-
-`react-inform` provides a simple decorator.  To that decorator you provide a list of fields in the form, and an optional validate function.  The `validate` function takes in an object where the keys are fieldnames and the values are the values of the fields, and it should return an object where the keys are fieldnames and the values are error strings.
-
-We can configure a simple form that
-=======
 ## Demos
 
 [Simple Form](http://theadam.github.io/react-inform/examples/basic-example/)
@@ -159,4 +153,3 @@ A Component which can be used inside a React Component wrapped with `react-infor
 ## License
 
 MIT
->>>>>>> master
