@@ -177,7 +177,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }], [{
 	    key: "contextTypes",
 	    value: {
-	      form: _react.PropTypes.object
+	      form: _react.PropTypes.object.isRequired
 	    },
 	    enumerable: true
 	  }]);
@@ -252,7 +252,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: "contextTypes",
 	    value: {
-	      form: _react.PropTypes.object
+	      form: _react.PropTypes.object.isRequired
 	    },
 	    enumerable: true
 	  }]);
@@ -306,9 +306,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  return function (Wrapped) {
 	    return (function (_Component) {
-	      _inherits(Wrapper, _Component);
+	      _inherits(FormWrapper, _Component);
 
-	      _createClass(Wrapper, null, [{
+	      _createClass(FormWrapper, null, [{
 	        key: 'childContextTypes',
 	        value: {
 	          form: _react.PropTypes.object,
@@ -324,18 +324,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	        enumerable: true
 	      }]);
 
-	      function Wrapper(props) {
-	        _classCallCheck(this, Wrapper);
+	      function FormWrapper(props) {
+	        _classCallCheck(this, FormWrapper);
 
-	        _get(Object.getPrototypeOf(Wrapper.prototype), 'constructor', this).call(this, props);
+	        _get(Object.getPrototypeOf(FormWrapper.prototype), 'constructor', this).call(this, props);
 	        this.fields = this.createFields(fields);
 	        this.values = {};
 	        this.touched = {};
 	        this.resolveErrors();
-	        if (props.formData) this.applyValues(props.formData);
+	        if (props.formData !== undefined) this.setEachValue(props.formData);
 	      }
 
-	      _createClass(Wrapper, [{
+	      _createClass(FormWrapper, [{
 	        key: 'createFields',
 	        value: function createFields(newFields) {
 	          var _this = this;
@@ -345,55 +345,87 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }, {});
 	        }
 	      }, {
-	        key: 'change',
-	        value: function change(name, e, forced) {
-	          var value = (0, _getValue2['default'])(e);
-	          this.fields[name].value = value;
-	          if (typeof value === 'boolean') this.fields[name].checked = value;else delete this.fields[name].checked;
-	          this.values[name] = value;
-	          if (value !== undefined) this.touched[name] = true;
-	          if (!forced) {
-	            this.resolveErrors();
-	            this.forceUpdate();
-	            if (this.props.onChange) this.props.onChange(this.values);
-	          }
-	        }
-	      }, {
-	        key: 'applyValues',
-	        value: function applyValues(data) {
+	        key: 'createField',
+	        value: function createField(name) {
 	          var _this2 = this;
 
+	          return {
+	            onBlur: function onBlur() {
+	              return _this2.blur(name);
+	            },
+	            onChange: function onChange(e) {
+	              return _this2.handleChange(name, e);
+	            },
+	            value: undefined
+	          };
+	        }
+	      }, {
+	        key: 'handleChange',
+	        value: function handleChange(name, e) {
+	          var value = (0, _getValue2['default'])(e);
+	          var changed = this.setValues(_extends({}, this.values, _defineProperty({}, name, value)));
+	          if (changed) this.forceUpdate();
+	        }
+	      }, {
+	        key: 'pushChanges',
+	        value: function pushChanges(data) {
+	          if (this.props.onChange) this.props.onChange(data || this.values);
+	        }
+	      }, {
+	        key: 'setValue',
+	        value: function setValue(name, value) {
+	          if (this.values[name] === value) return false;
+	          this.fields[name].value = value;
+	          this.values[name] = value;
+	          if (typeof value === 'boolean') this.fields[name].checked = value;else delete this.fields[name].checked;
+	          if (value !== undefined) this.touched[name] = true;
+	          return true;
+	        }
+	      }, {
+	        key: 'flushChanges',
+	        value: function flushChanges() {
+	          this.resolveErrors();
+	          this.forceUpdate();
+	        }
+	      }, {
+	        key: 'setEachValue',
+	        value: function setEachValue(data) {
+	          var _this3 = this;
+
+	          var changed = false;
 	          fields.forEach(function (field) {
 	            var prop = data[field];
-	            _this2.change(field, prop, true);
+	            changed = _this3.setValue(field, prop) || changed;
 	          });
-	          this.resolveErrors();
+	          if (changed) this.resolveErrors();
+	          return changed;
 	        }
 	      }, {
 	        key: 'setValues',
 	        value: function setValues(data) {
-	          if (this.props.formData && this.props.onChange) {
-	            this.props.onChange(data);
-	          } else {
-	            this.applyValues(data);
+	          var changed = false;
+	          if (this.props.formData === undefined) {
+	            changed = this.setEachValue(data);
 	          }
+	          this.pushChanges(data);
+	          return changed;
 	        }
 	      }, {
 	        key: 'componentWillReceiveProps',
 	        value: function componentWillReceiveProps(nextProps) {
-	          if (this.props.formData !== nextProps.formData) {
-	            this.applyValues(nextProps.formData);
+	          if (nextProps.formData !== undefined && this.props.formData !== nextProps.formData) {
+	            this.setEachValue(nextProps.formData);
 	          }
 	        }
 	      }, {
 	        key: 'resolveErrors',
 	        value: function resolveErrors() {
-	          var _this3 = this;
+	          var _this4 = this;
 
 	          this.errors = validate(this.values);
 	          fields.forEach(function (field) {
-	            if (_this3.touched[field]) {
-	              _this3.fields[field].error = _this3.errors[field];
+	            if (_this4.touched[field]) {
+	              _this4.fields[field].error = _this4.errors[field];
 	            }
 	          });
 	        }
@@ -402,27 +434,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        value: function blur(name) {
 	          if (!this.touched[name]) {
 	            this.touched[name] = true;
-	            this.resolveErrors();
-	            this.forceUpdate();
+	            this.flushChanges();
 	          }
-	        }
-	      }, {
-	        key: 'createField',
-	        value: function createField(name) {
-	          var _this4 = this;
-
-	          return {
-	            onFocus: function onFocus() {
-	              return true;
-	            },
-	            onBlur: function onBlur() {
-	              return _this4.blur(name);
-	            },
-	            onChange: function onChange(e) {
-	              return _this4.change(name, e);
-	            },
-	            value: undefined
-	          };
 	        }
 	      }, {
 	        key: 'touchAll',
@@ -444,8 +457,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            },
 	            forceValidate: function forceValidate() {
 	              _this6.touchAll();
-	              _this6.resolveErrors();
-	              _this6.forceUpdate();
+	              _this6.flushChanges();
 	            },
 	            values: function values() {
 	              return _this6.values;
@@ -456,21 +468,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	          };
 	        }
 	      }, {
-	        key: 'getChildContext',
-	        value: function getChildContext() {
+	        key: 'generatedProps',
+	        value: function generatedProps() {
 	          return {
 	            form: this.formProps(),
 	            fields: this.fields
 	          };
 	        }
 	      }, {
+	        key: 'getChildContext',
+	        value: function getChildContext() {
+	          return this.generatedProps();
+	        }
+	      }, {
 	        key: 'render',
 	        value: function render() {
-	          return _react2['default'].createElement(Wrapped, _extends({ fields: this.fields }, this.props, { form: this.formProps() }));
+	          return _react2['default'].createElement(Wrapped, _extends({}, this.generatedProps(), this.props));
 	        }
 	      }]);
 
-	      return Wrapper;
+	      return FormWrapper;
 	    })(_react.Component);
 	  };
 	}
@@ -618,7 +635,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'contextTypes',
 	    value: {
-	      form: _react.PropTypes.object
+	      form: _react.PropTypes.object.isRequired
 	    },
 	    enumerable: true
 	  }]);
