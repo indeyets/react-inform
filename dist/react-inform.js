@@ -318,7 +318,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }, {
 	        key: 'propTypes',
 	        value: {
-	          formData: _react.PropTypes.object,
+	          value: _react.PropTypes.object,
 	          onChange: _react.PropTypes.func
 	        },
 	        enumerable: true
@@ -332,7 +332,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.values = {};
 	        this.touched = {};
 	        this.resolveErrors();
-	        if (props.formData !== undefined) this.setEachValue(props.formData);
+	        if (props.value !== undefined) this.setEachValue(props.value);
 	      }
 
 	      _createClass(FormWrapper, [{
@@ -378,7 +378,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	          this.fields[name].value = value;
 	          this.values[name] = value;
 	          if (typeof value === 'boolean') this.fields[name].checked = value;else delete this.fields[name].checked;
-	          if (value !== undefined) this.touched[name] = true;
 	          return true;
 	        }
 	      }, {
@@ -404,7 +403,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        key: 'setValues',
 	        value: function setValues(data) {
 	          var changed = false;
-	          if (this.props.formData === undefined) {
+	          if (this.props.value === undefined) {
 	            changed = this.setEachValue(data);
 	          }
 	          this.pushChanges(data);
@@ -413,8 +412,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }, {
 	        key: 'componentWillReceiveProps',
 	        value: function componentWillReceiveProps(nextProps) {
-	          if (nextProps.formData !== undefined && this.props.formData !== nextProps.formData) {
-	            this.setEachValue(nextProps.formData);
+	          if (nextProps.value !== undefined && this.props.value !== nextProps.value) {
+	            this.setEachValue(nextProps.value);
 	          }
 	        }
 	      }, {
