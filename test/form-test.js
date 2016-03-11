@@ -59,7 +59,7 @@ describe('form', () => {
 
   describe('fields', () => {
     describe('onChange', () => {
-      describe('when there is not a formData prop', () => {
+      describe('when there is not a value prop', () => {
         beforeEach(() => {
           render();
           output.props.fields.field.onChange('newValue');
@@ -71,10 +71,10 @@ describe('form', () => {
         });
       });
 
-      describe('when there is a formData prop', () => {
+      describe('when there is a value prop', () => {
         beforeEach(() => {
           props = {
-            formData: {
+            value: {
               field: 'staticValue',
             },
           };
@@ -85,18 +85,6 @@ describe('form', () => {
 
         it('does not change the value prop', () => {
           expect(output.props.fields.field.value).toEqual('staticValue');
-        });
-      });
-
-      describe('when changed to an invalid value', () => {
-        beforeEach(() => {
-          render();
-          output.props.fields.field.onChange('INVALID');
-          update();
-        });
-
-        it('passes the error property', () => {
-          expect(output.props.fields.field.error).toEqual('FIELD INVALID');
         });
       });
 
@@ -205,7 +193,7 @@ describe('form', () => {
     });
 
     describe('onValues', () => {
-      describe('when there is no formData prop', () => {
+      describe('when there is no value prop', () => {
         beforeEach(() => {
           render();
           output.props.form.onValues({field: 'newValue'});
@@ -217,10 +205,10 @@ describe('form', () => {
         });
       });
 
-      describe('when there is a formData prop', () => {
+      describe('when there is a value prop', () => {
         beforeEach(() => {
           props = {
-            formData: {
+            value: {
               field: 'staticValue',
             },
             onChange: spy(),
