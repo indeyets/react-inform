@@ -17,6 +17,10 @@ Forms are not currently fun to work with in React.  There are a lot of form libr
 
 [Simple Form With Animations Using mation](http://theadam.github.io/react-inform/examples/mation-example/)
 
+[Form with Async validation](http://theadam.github.io/react-inform/examples/async-example/)
+
+[Integration with react-intl v2](https://jsfiddle.net/d0hypvtz/8/)
+
 ## Installation
 
 `npm install --save react-inform`
@@ -89,12 +93,13 @@ Simple!  Your form now validates, and keeps track of its state without all the b
 
 Creates a function used to wrap a react component.  Accepts an object that contains the keys `fields` and optionally `validate`.  `fields` is an array of fieldnames. `validate` is a function used to validate the field values.
 
-The validate function should accept a map of fieldnames to values, and return a map of fieldnames to error strings.
+The validate function should accept a map of fieldnames to values, and return a map of fieldnames to error strings (or a Promise that resolves to a map of fieldnames to error strings).
 
 #### Accepted properties
 
 * `value`: to control the data in the form from the parent of a form.
 * `onChange`: to react to changes to the form in the parent of a form.
+* `onValidate`: to react to changes in the validation state of the form.  The callback will be passed a boolean that is `true` when the form becomes valid.
 
 #### Properties passed to wrapped components
 
@@ -102,7 +107,7 @@ The validate function should accept a map of fieldnames to values, and return a 
 
 Form contains some utility functions to affect the wrapping form.  These include:
 
-* `isValid()`: returns trus if all of the fields are valid
+* `isValid()`: returns true if all of the fields are valid
 * `forceValidate()`: Causes all of the fields to get passed their error properties.  Usually errors are only passed after the field has been "touched" (either after onBlur or onChange).
 * `value()`: returns the current value of all the form fields as a map.
 * `onValues(values)`: forcefully sets all of the values in the form to the passed values.
@@ -113,7 +118,7 @@ Form contains some utility functions to affect the wrapping form.  These include
 
 ### createValidate(ruleMap)
 
-A helper to create `validate` functions from maps of rules.
+A helper to create `validate` functions from maps of rules.  Rule functions can return Promises that resolve to booleans to support async validations.
 
 This is an example rule map that ensures that username exists, password exists, and confirmPassword matches password.  Notice the keys to the rules are the error messages that will appear when the field is invalid.
 

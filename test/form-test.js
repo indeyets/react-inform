@@ -16,7 +16,6 @@ const validate = ({field}) => {
 class MyForm extends Component {
 }
 
-const WrappedForm = form({fields, validate})(MyForm);
 
 describe('form', () => {
   let props;
@@ -25,8 +24,10 @@ describe('form', () => {
   let renderer;
   let output;
   let instance;
+  let WrappedForm;
 
   beforeEach(() => {
+    WrappedForm = form({fields, validate})(MyForm);
     props = {foo: 'bar'};
     update = () => {
       renderer.render(<WrappedForm {...props} />);
@@ -107,8 +108,34 @@ describe('form', () => {
           });
 
           it('removes the checked property', () => {
-            expect(output.props.fields.field.hasOwnProperty('checked')).toEqual(false);
+            expect(output.props.fields.field.checked).toEqual(undefined);
           });
+        });
+      });
+    });
+
+    describe('asyncValidation', () => {
+      describe('when the value is invalid', () => {
+        beforeEach(() => {
+          return new Promise(resolve => {
+            function asyncValidate(values) {
+              const errors = validate(values);
+              return Promise.resolve(errors).then(err => {
+                process.nextTick(() => {
+                  update();
+                  resolve();
+                });
+                return err;
+              });
+            }
+            WrappedForm = form({fields, validate: asyncValidate})(MyForm);
+            render();
+            output.props.fields.field.onBlur();
+          });
+        });
+
+        it('passes down the error property', () => {
+          expect(output.props.fields.field.error).toEqual('REQUIRED');
         });
       });
     });
@@ -129,7 +156,7 @@ describe('form', () => {
       describe('when the value is valid', () => {
         beforeEach(() => {
           render();
-          instance.values.field = 'valid';
+          instance.setValues({ field: 'valid' });
           output.props.fields.field.onBlur();
           update();
         });
@@ -145,8 +172,12 @@ describe('form', () => {
     describe('isValid', () => {
       describe('when there are errors', () => {
         beforeEach(() => {
+          props = {
+            value: {
+              field: '',
+            },
+          };
           render();
-          instance.errors = {field: 'error'};
         });
 
         it('returns false', () => {
@@ -156,8 +187,12 @@ describe('form', () => {
 
       describe('when there are no errors', () => {
         beforeEach(() => {
+          props = {
+            value: {
+              field: 'valid',
+            },
+          };
           render();
-          instance.errors = {};
         });
 
         it('returns true', () => {
@@ -224,6 +259,56 @@ describe('form', () => {
 
         it('calls the onChange listener', () => {
           expect(props.onChange.calledWith({field: 'newValue'})).toEqual(true);
+        });
+      });
+    });
+  });
+
+  describe('props from parent', () => {
+    describe('onValidate', () => {
+      beforeEach(() => {
+        props = {
+          onValidate: spy(),
+        };
+      });
+
+      describe('when fields are valid', () => {
+        beforeEach(() => {
+          props = {
+            ...props,
+            value: {
+              field: 'valid',
+            },
+          };
+          render();
+        });
+
+        it('is called with true', () => {
+          expect(props.onValidate.calledWith(true)).toEqual(true);
+        });
+      });
+
+      describe('when fields are invalid', () => {
+        beforeEach(() => {
+          render();
+        });
+
+        it('is called with false', () => {
+          expect(props.onValidate.calledWith(false)).toEqual(true);
+        });
+      });
+
+      describe('when fields are invalid multiple times in a row', () => {
+        beforeEach(() => {
+          render();
+          props.value = {
+            field: 'INVALID',
+          };
+          update();
+        });
+
+        it('is called with false', () => {
+          expect(props.onValidate.calledOnce).toEqual(true);
         });
       });
     });
