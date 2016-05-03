@@ -110,25 +110,75 @@ return /******/ (function(modules) { // webpackBootstrap
 	  value: true
 	});
 	exports["default"] = createValidate;
+	var hasThen = function hasThen(obj) {
+	  return !!obj && obj.then instanceof Function;
+	};
+
+	function gen(obj) {
+	  var index = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
+	  var keys = arguments.length <= 2 || arguments[2] === undefined ? Object.keys(obj) : arguments[2];
+	  return (function () {
+	    return {
+	      keys: keys,
+	      index: index,
+	      key: keys[index],
+	      value: obj[keys[index]],
+	      next: function next() {
+	        return gen(obj, index + 1, keys);
+	      },
+	      done: index >= keys.length
+	    };
+	  })();
+	}
+
+	function validateField(_x3, _x4, _x5) {
+	  var _again = true;
+
+	  _function: while (_again) {
+	    var value = _x3,
+	        values = _x4,
+	        rule = _x5;
+	    _again = false;
+
+	    if (rule.done) return undefined;
+	    var result = rule.value(value, values);
+
+	    if (hasThen(result)) {
+	      return result.then(function (res) {
+	        if (!res) return rule.key;
+	        return validateField(value, values, rule.next());
+	      });
+	    } else if (!result) return rule.key;
+	    _x3 = value;
+	    _x4 = values;
+	    _x5 = rule.next();
+	    _again = true;
+	    result = undefined;
+	    continue _function;
+	  }
+	}
 
 	function createValidate(rulesMap) {
 	  return function (values) {
 	    var errors = {};
+	    var promises = [];
 	    Object.keys(rulesMap).forEach(function (key) {
 	      var rules = rulesMap[key];
 	      var value = values[key];
+	      var result = validateField(value, values, gen(rules));
 
-	      for (var message in rules) {
-	        if (rules.hasOwnProperty(message)) {
-	          var rule = rules[message];
-	          if (!rule(value, values)) {
-	            errors[key] = message;
-	            break;
+	      if (hasThen(result)) {
+	        promises.push(result.then(function (v) {
+	          if (v !== undefined) {
+	            errors[key] = v;
 	          }
-	        }
-	      }
+	        }));
+	      } else if (result !== undefined) errors[key] = result;
 	    });
-	    return errors;
+	    if (promises.length === 0) return errors;
+	    return Promise.all(promises).then(function () {
+	      return errors;
+	    });
 	  };
 	}
 
@@ -308,45 +358,64 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return (function (_Component) {
 	      _inherits(FormWrapper, _Component);
 
-	      _createClass(FormWrapper, null, [{
-	        key: 'childContextTypes',
-	        value: {
-	          form: _react.PropTypes.object,
-	          fields: _react.PropTypes.object
-	        },
-	        enumerable: true
-	      }, {
-	        key: 'propTypes',
-	        value: {
-	          value: _react.PropTypes.object,
-	          onChange: _react.PropTypes.func
-	        },
-	        enumerable: true
-	      }]);
-
-	      function FormWrapper(props) {
+	      function FormWrapper() {
 	        _classCallCheck(this, FormWrapper);
 
-	        _get(Object.getPrototypeOf(FormWrapper.prototype), 'constructor', this).call(this, props);
-	        this.fields = this.createFields(fields);
-	        this.values = {};
-	        this.touched = {};
-	        this.resolveErrors();
-	        if (props.value !== undefined) this.setEachValue(props.value);
+	        _get(Object.getPrototypeOf(FormWrapper.prototype), 'constructor', this).apply(this, arguments);
+
+	        this.state = {
+	          touched: {},
+	          errors: {},
+	          valid: undefined
+	        };
 	      }
 
 	      _createClass(FormWrapper, [{
-	        key: 'createFields',
-	        value: function createFields(newFields) {
-	          var _this = this;
-
-	          return newFields.reduce(function (acc, v) {
-	            return _extends({}, acc, _defineProperty({}, v, _this.createField(v)));
-	          }, {});
+	        key: 'componentWillMount',
+	        value: function componentWillMount() {
+	          var values = this.props.value || {};
+	          this.setState({ values: values });
+	          this.handleValidate(values);
 	        }
 	      }, {
-	        key: 'createField',
-	        value: function createField(name) {
+	        key: 'componentWillReceiveProps',
+	        value: function componentWillReceiveProps(nextProps) {
+	          this.setValues(nextProps.value);
+	        }
+	      }, {
+	        key: 'setValues',
+	        value: function setValues(values) {
+	          if (values === undefined) return;
+	          this.setState({ values: values });
+	          this.handleValidate(values);
+	        }
+	      }, {
+	        key: 'setErrors',
+	        value: function setErrors(errors) {
+	          var valid = Object.keys(errors).length === 0;
+	          if (valid !== this.state.valid) {
+	            this.setState({ valid: valid });
+	            if (this.props.onValidate) this.props.onValidate(valid);
+	          }
+	          this.setState({ errors: errors });
+	        }
+	      }, {
+	        key: 'handleValidate',
+	        value: function handleValidate(values) {
+	          var _this = this;
+
+	          var errors = validate(values);
+	          if (errors.then instanceof Function) {
+	            errors.then(function (errs) {
+	              return _this.setErrors(errs);
+	            });
+	          } else {
+	            this.setErrors(errors);
+	          }
+	        }
+	      }, {
+	        key: 'field',
+	        value: function field(name) {
 	          var _this2 = this;
 
 	          return {
@@ -355,123 +424,98 @@ return /******/ (function(modules) { // webpackBootstrap
 	            },
 	            onChange: function onChange(e) {
 	              return _this2.handleChange(name, e);
-	            },
-	            value: undefined
+	            }
 	          };
 	        }
 	      }, {
 	        key: 'handleChange',
 	        value: function handleChange(name, e) {
 	          var value = (0, _getValue2['default'])(e);
-	          var changed = this.setValues(_extends({}, this.values, _defineProperty({}, name, value)));
-	          if (changed) this.forceUpdate();
+	          var values = _extends({}, this.state.values, _defineProperty({}, name, value));
+
+	          if (value === this.state.values[name]) return;
+	          if (this.props.onChange) this.props.onChange(values);
+	          if (this.props.value !== undefined) return;
+
+	          this.setState({
+	            values: values
+	          });
+	          this.handleValidate(values);
 	        }
 	      }, {
-	        key: 'pushChanges',
-	        value: function pushChanges(data) {
-	          if (this.props.onChange) this.props.onChange(data || this.values);
-	        }
-	      }, {
-	        key: 'setValue',
-	        value: function setValue(name, value) {
-	          if (this.values[name] === value) return false;
-	          this.fields[name].value = value;
-	          this.values[name] = value;
-	          if (typeof value === 'boolean') this.fields[name].checked = value;else delete this.fields[name].checked;
-	          return true;
-	        }
-	      }, {
-	        key: 'flushChanges',
-	        value: function flushChanges() {
-	          this.resolveErrors();
-	          this.forceUpdate();
-	        }
-	      }, {
-	        key: 'setEachValue',
-	        value: function setEachValue(data) {
+	        key: 'touch',
+	        value: function touch(vals) {
 	          var _this3 = this;
 
-	          var changed = false;
-	          fields.forEach(function (field) {
-	            var prop = data[field];
-	            changed = _this3.setValue(field, prop) || changed;
-	          });
-	          if (changed) this.resolveErrors();
-	          return changed;
-	        }
-	      }, {
-	        key: 'setValues',
-	        value: function setValues(data) {
-	          var changed = false;
-	          if (this.props.value === undefined) {
-	            changed = this.setEachValue(data);
-	          }
-	          this.pushChanges(data);
-	          return changed;
-	        }
-	      }, {
-	        key: 'componentWillReceiveProps',
-	        value: function componentWillReceiveProps(nextProps) {
-	          if (nextProps.value !== undefined && this.props.value !== nextProps.value) {
-	            this.setEachValue(nextProps.value);
-	          }
-	        }
-	      }, {
-	        key: 'resolveErrors',
-	        value: function resolveErrors() {
-	          var _this4 = this;
+	          var allTouched = vals.reduce(function (acc, name) {
+	            return acc && _this3.state.touched[name];
+	          }, true);
+	          if (allTouched) return;
 
-	          this.errors = validate(this.values);
-	          fields.forEach(function (field) {
-	            if (_this4.touched[field]) {
-	              _this4.fields[field].error = _this4.errors[field];
-	            }
-	          });
-	        }
-	      }, {
-	        key: 'blur',
-	        value: function blur(name) {
-	          if (!this.touched[name]) {
-	            this.touched[name] = true;
-	            this.flushChanges();
-	          }
-	        }
-	      }, {
-	        key: 'touchAll',
-	        value: function touchAll() {
-	          var _this5 = this;
-
-	          fields.forEach(function (field) {
-	            _this5.touched[field] = true;
-	          });
+	          this.setState({ touched: _extends({}, this.state.touched, vals.reduce(function (acc, name) {
+	              return _extends({}, acc, _defineProperty({}, name, true));
+	            }, {})) });
 	        }
 	      }, {
 	        key: 'formProps',
 	        value: function formProps() {
-	          var _this6 = this;
+	          var _this4 = this;
 
 	          return {
 	            isValid: function isValid() {
-	              return Object.keys(_this6.errors).length === 0;
+	              return _this4.state.valid;
 	            },
 	            forceValidate: function forceValidate() {
-	              _this6.touchAll();
-	              _this6.flushChanges();
+	              return _this4.touch(fields);
 	            },
 	            values: function values() {
-	              return _this6.values;
+	              return _this4.state.values;
 	            },
 	            onValues: function onValues(values) {
-	              return _this6.setValues(values);
+	              if (!_this4.props.value) {
+	                _this4.setState({ values: values });
+	              }
+	              if (_this4.props.onChange) _this4.props.onChange(values);
 	            }
 	          };
+	        }
+	      }, {
+	        key: 'makeField',
+	        value: function makeField(name) {
+	          var _this5 = this;
+
+	          var _state = this.state;
+	          var values = _state.values;
+	          var errors = _state.errors;
+	          var touched = _state.touched;
+
+	          return {
+	            onChange: function onChange(e) {
+	              return _this5.handleChange(name, e);
+	            },
+	            onBlur: function onBlur() {
+	              return _this5.touch([name]);
+	            },
+	            value: values[name] || '',
+	            error: touched[name] ? errors[name] : undefined,
+	            checked: typeof values[name] === 'boolean' ? values[name] : undefined
+	          };
+	        }
+	      }, {
+	        key: 'makeFields',
+	        value: function makeFields() {
+	          var _this6 = this;
+
+	          return fields.reduce(function (acc, name) {
+	            return _extends({}, acc, _defineProperty({}, name, _this6.makeField(name)));
+	          }, {});
 	        }
 	      }, {
 	        key: 'generatedProps',
 	        value: function generatedProps() {
 	          return {
 	            form: this.formProps(),
-	            fields: this.fields
+	            fields: this.makeFields()
 	          };
 	        }
 	      }, {
@@ -482,8 +526,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }, {
 	        key: 'render',
 	        value: function render() {
-	          return _react2['default'].createElement(Wrapped, _extends({}, this.generatedProps(), this.props));
+	          return _react2['default'].createElement(Wrapped, _extends({}, this.props, this.generatedProps()));
 	        }
+	      }], [{
+	        key: 'childContextTypes',
+	        value: {
+	          form: _react.PropTypes.object,
+	          fields: _react.PropTypes.object
+	        },
+	        enumerable: true
+	      }, {
+	        key: 'propTypes',
+	        value: {
+	          value: _react.PropTypes.object,
+	          onChange: _react.PropTypes.func,
+	          onValidate: _react.PropTypes.func
+	        },
+	        enumerable: true
 	      }]);
 
 	      return FormWrapper;
